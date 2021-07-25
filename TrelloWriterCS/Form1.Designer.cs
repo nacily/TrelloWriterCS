@@ -66,7 +66,7 @@ namespace TrelloWriterCS
             this.MenuItem_Help});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(747, 24);
+            this.menuStrip1.Size = new System.Drawing.Size(745, 24);
             this.menuStrip1.TabIndex = 0;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -96,7 +96,7 @@ namespace TrelloWriterCS
             // MenuItem_Help_Version
             // 
             this.MenuItem_Help_Version.Name = "MenuItem_Help_Version";
-            this.MenuItem_Help_Version.Size = new System.Drawing.Size(180, 22);
+            this.MenuItem_Help_Version.Size = new System.Drawing.Size(142, 22);
             this.MenuItem_Help_Version.Text = "バージョン情報";
             this.MenuItem_Help_Version.Click += new System.EventHandler(this.MenuItem_Help_Version_Click);
             // 
@@ -115,14 +115,14 @@ namespace TrelloWriterCS
             this.groupBox_devInfo.Controls.Add(this.label_devKey);
             this.groupBox_devInfo.Location = new System.Drawing.Point(12, 27);
             this.groupBox_devInfo.Name = "groupBox_devInfo";
-            this.groupBox_devInfo.Size = new System.Drawing.Size(726, 127);
+            this.groupBox_devInfo.Size = new System.Drawing.Size(723, 127);
             this.groupBox_devInfo.TabIndex = 1;
             this.groupBox_devInfo.TabStop = false;
             this.groupBox_devInfo.Text = "開発者情報";
             // 
             // button_user_auth
             // 
-            this.button_user_auth.Location = new System.Drawing.Point(640, 17);
+            this.button_user_auth.Location = new System.Drawing.Point(642, 17);
             this.button_user_auth.Name = "button_user_auth";
             this.button_user_auth.Size = new System.Drawing.Size(75, 23);
             this.button_user_auth.TabIndex = 3;
@@ -230,7 +230,7 @@ namespace TrelloWriterCS
             this.groupBox_boardInfo.Controls.Add(this.label_bordName);
             this.groupBox_boardInfo.Location = new System.Drawing.Point(12, 160);
             this.groupBox_boardInfo.Name = "groupBox_boardInfo";
-            this.groupBox_boardInfo.Size = new System.Drawing.Size(726, 96);
+            this.groupBox_boardInfo.Size = new System.Drawing.Size(723, 96);
             this.groupBox_boardInfo.TabIndex = 6;
             this.groupBox_boardInfo.TabStop = false;
             this.groupBox_boardInfo.Text = "登録先のボード情報";
@@ -256,7 +256,7 @@ namespace TrelloWriterCS
             // label_listName
             // 
             this.label_listName.AutoSize = true;
-            this.label_listName.Location = new System.Drawing.Point(379, 21);
+            this.label_listName.Location = new System.Drawing.Point(381, 21);
             this.label_listName.Name = "label_listName";
             this.label_listName.Size = new System.Drawing.Size(87, 12);
             this.label_listName.TabIndex = 97;
@@ -266,7 +266,7 @@ namespace TrelloWriterCS
             // comboBox_listName
             // 
             this.comboBox_listName.FormattingEnabled = true;
-            this.comboBox_listName.Location = new System.Drawing.Point(472, 18);
+            this.comboBox_listName.Location = new System.Drawing.Point(474, 18);
             this.comboBox_listName.Name = "comboBox_listName";
             this.comboBox_listName.Size = new System.Drawing.Size(243, 20);
             this.comboBox_listName.TabIndex = 8;
@@ -293,9 +293,11 @@ namespace TrelloWriterCS
             // 
             // button_commit
             // 
+            this.button_commit.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.button_commit.Location = new System.Drawing.Point(12, 262);
             this.button_commit.Name = "button_commit";
-            this.button_commit.Size = new System.Drawing.Size(359, 31);
+            this.button_commit.Size = new System.Drawing.Size(357, 31);
             this.button_commit.TabIndex = 9;
             this.button_commit.Text = "カード一括登録";
             this.button_commit.UseVisualStyleBackColor = true;
@@ -303,9 +305,11 @@ namespace TrelloWriterCS
             // 
             // button_exit
             // 
-            this.button_exit.Location = new System.Drawing.Point(379, 262);
+            this.button_exit.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.button_exit.Location = new System.Drawing.Point(376, 262);
             this.button_exit.Name = "button_exit";
-            this.button_exit.Size = new System.Drawing.Size(359, 31);
+            this.button_exit.Size = new System.Drawing.Size(357, 31);
             this.button_exit.TabIndex = 10;
             this.button_exit.Text = "終了";
             this.button_exit.UseVisualStyleBackColor = true;
@@ -315,7 +319,7 @@ namespace TrelloWriterCS
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(747, 302);
+            this.ClientSize = new System.Drawing.Size(745, 303);
             this.Controls.Add(this.button_exit);
             this.Controls.Add(this.button_commit);
             this.Controls.Add(this.groupBox_boardInfo);

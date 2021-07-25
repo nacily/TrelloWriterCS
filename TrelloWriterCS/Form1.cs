@@ -10,6 +10,7 @@ using System.Windows.Forms;
 
 using System.IO;
 using TrelloNet;
+using System.Threading;
 
 namespace TrelloWriterCS
 {
@@ -34,6 +35,12 @@ namespace TrelloWriterCS
         public const string NEW_LINE_CHAR = "\n";
         // 定数 コロン
         public const string COLON = " : ";
+        // 定数 大見出し
+        public const string TEXT_BIG_TITLE = "###";
+        // 定数 全角スペース
+        public const string TEXT_DOUBLE_SPACE = "　";
+        // 定数 中点
+        public const string TEXT_MID_DOT = "・";
 
         // 定数 開発者情報ファイル 1行あたりの要素数
         public const int FILE_FORMAT_LINE_LENGTH_DEV_INFO = 3;
@@ -47,14 +54,10 @@ namespace TrelloWriterCS
         public const string FILE_NAME_DEV_INFO_JP = "開発者情報";
         // ファイル名 開発者情報ファイル (EN) 初期値 devInfo.csv (将来的には設定ファイルを外部化するが、当面はハードコーディング)
         public const string FILE_NAME_DEV_INFO_EN = "devInfo.csv";
-        // ファイル名 ボード情報ファイル (JP)
-        public const string FILE_NAME_BOARD_INFO_JP = "ボード情報";
-        // ファイル名 ボード情報ファイル (EN) 初期値 boardInfo.csv (同上)
-        public const string FILE_NAME_BOARD_INFO_EN = "boardInfo.csv";
-        // ファイル名 リスト情報ファイル (JP)
-        public const string FILE_NAME_LIST_INFO_JP = "リスト情報";
-        // ファイル名 リスト情報ファイル (EN) 初期値 listInfo.csv
-        public const string FILE_NAME_LIST_INFO_EN = "listInfo.csv";
+        // ファイル名 月間作業予定ファイル (JP)
+        public const string FILE_NAME_SCHEDULE_JP = "月間作業予定";
+        // ファイル名 月間作業予定ファイル (EN) 初期値 schedule.csv (同上)
+        public const string FILE_NAME_SCHEDULE_EN = "schedule.csv";
 
         // エラータイトル ファイル存在チェックエラー
         public const string ERROR_TITLE_FILE_NOT_EXIST = "存在チェックエラー";
@@ -64,6 +67,11 @@ namespace TrelloWriterCS
         public const string ERROR_TITLE_USER_AUTH_FAILURE = "ユーザ認証エラー";
         // エラータイトル ボード検索エラー
         public const string ERROR_TITLE_JOINING_BOARD_NOT_FOUND = "ボード検索エラー";
+        // エラータイトル ボード特定不可エラー
+        public const string ERROR_TITLE_TARGET_BOARD_MULTIPLE = "登録先ボード特定不可エラー";
+        // エラータイトル ファイル展開エラー
+        public const string ERROR_TITLE_FILE_CANNOT_OPEN = "ファイル展開エラー";
+
         // 確認タイトル 確認
         public const string TITLE_VERIFICATION = "確認";
         // ヘルプタイトル バージョン情報
@@ -86,6 +94,10 @@ namespace TrelloWriterCS
         public const string ERROR_MSG_USER_AUTH_FAILURE = "ユーザ認証に失敗しました。\n開発者情報ファイルの登録内容を再確認してください。";
         // エラーメッセージ 参加中のボードがありません (念の為)
         public const string ERROR_MSG_JOINING_BOARD_NOT_FOUND = "参加中のボード情報が取得できませんでした。\n1つ以上のボードに参加してください。";
+        // エラーメッセージ 登録先のボードが特定できません
+        public const string ERROR_MSG_TARGET_BOARD_MULTIPLE = "登録候補のボードが複数検出されました。\nID検索の阻害となるため、和名が重複しないよう修正し再試行してください。";
+        // エラーメッセージ ファイルの展開に失敗しました
+        public const string ERROR_MSG_FILE_CANNOT_OPEN = "ファイルの展開に失敗しました。\nファイルを閉じてから再試行してください。";
 
         // ヘルプメッセージ 開発者情報ファイル
         public const string HELP_MSG_DEV_INFO_FORMAT = "開発者情報ファイルは\n\n　氏名,キー,トークン\n\nの並びで1行ずつ記入してください。";
@@ -99,14 +111,16 @@ namespace TrelloWriterCS
 
         // 確認メッセージ 登録前最終確認
         public const string REG_VERIFICATION_MSG = "下記情報にて、カードを一括登録します。よろしいですか？";
+        // 確認メッセージ 一括登録完了
+        public const string REG_COMPLETE_MSG = " 件の登録処理が完了しました。";
 
 
         // 内部保持データ 開発者情報ファイルの中身 UI上 プルダウンに表示するために使う
-        Dictionary<int, string[]> FILE_DATA_DEV_INFO;
+        Dictionary<int, List<string>> FILE_DATA_DEV_INFO;
         // 内部保持データ ボード情報とリスト情報 UI上 各プルダウンに表示するために使う
         Dictionary<string, List<string>> IN_DATA_BOARD_AND_LIST_INFO;
         // 内部保持データ 登録データファイルの中身 バックグラウンドで保持する
-        Dictionary<int, string[]> FILE_DATA_MONTHLY_CSV;
+        Dictionary<int, List<string>> SCHEDULE_DATA;
 
         // 内部保持データ Trelloインスタンス
         Trello trello;
@@ -118,9 +132,9 @@ namespace TrelloWriterCS
             InitializeComponent();
 
             // 内部保持データの初期化
-            FILE_DATA_DEV_INFO = new Dictionary<int, string[]>();
+            FILE_DATA_DEV_INFO = new Dictionary<int, List<string>> ();
             IN_DATA_BOARD_AND_LIST_INFO = new Dictionary<string, List<string>>();
-            FILE_DATA_MONTHLY_CSV = new Dictionary<int, string[]>();
+            SCHEDULE_DATA = new Dictionary<int, List<string>>();
 
             // 開発者情報ファイルのチェック処理
             checkFile_DevInfo();
@@ -184,17 +198,17 @@ namespace TrelloWriterCS
             }
 
             // 開発者情報グループ キーのプルダウンに値を格納
-            foreach (KeyValuePair<int, string[]> keyValuePairDevKey in FILE_DATA_DEV_INFO)
+            foreach (KeyValuePair<int, List<string>> keyValuePairDevKey in FILE_DATA_DEV_INFO)
             {
                 // ファイルから読み込んだ各行の配列要素を取得する
-                string[] valList = new string[keyValuePairDevKey.Value.Length];
-                valList = keyValuePairDevKey.Value;
+                List<string> strList = new List<string>(keyValuePairDevKey.Value.Count);
+                strList = keyValuePairDevKey.Value;
                 // 開発者情報ファイルの各行1要素目(index=0)を、氏名コンボボックスに1つずつ格納
-                this.comboBox_userName.Items.Add(valList.GetValue(0));
+                this.comboBox_userName.Items.Add(strList[0]);
                 // 開発者情報ファイルの各行2要素目(index=1)を、キーコンボボックスに1つずつ格納
-                this.comboBox_devKey.Items.Add(valList.GetValue(1));
+                this.comboBox_devKey.Items.Add(strList[1]);
                 // 開発者情報ファイルの各行3要素目(index=2)を、トークンコンボボックスに1つずつ格納
-                this.comboBox_devToken.Items.Add(valList.GetValue(2));
+                this.comboBox_devToken.Items.Add(strList[2]);
             }
             // 各コンボボックスの初期表示は先頭行
             this.comboBox_userName.SelectedIndex = 0;
@@ -213,7 +227,6 @@ namespace TrelloWriterCS
             this.comboBox_boardName.FlatStyle = FlatStyle.Flat;
             this.comboBox_listName.FlatStyle = FlatStyle.Flat;
         }
-
 
         /// <summary>
         /// 氏名コンボボックス操作時のキー・トークン自動切り替え処理
@@ -234,19 +247,19 @@ namespace TrelloWriterCS
             int nameIndex = this.comboBox_userName.SelectedIndex;
 
             // 選択中の氏名のコンボボックス内のインデックス = 開発者情報オブジェクトのKEY部
-            foreach (KeyValuePair<int, string[]> keyValuePairDevKey in FILE_DATA_DEV_INFO)
+            foreach (KeyValuePair<int, List<string>> keyValuePairDevKey in FILE_DATA_DEV_INFO)
             {
                 // ファイルから読み込んだ各行の配列要素を取得する
-                string[] valList = new string[keyValuePairDevKey.Value.Length];
-                valList = keyValuePairDevKey.Value;
+                List<string> strList = new List<string>();
+                strList.AddRange(keyValuePairDevKey.Value);
 
                 // 開発者情報オブジェクトのKEY部(<int>行数)とコンボボックスのインデックスが合致
                 if (keyValuePairDevKey.Key.Equals(nameIndex))
                 {
                     // 画面表示のキーに 該当行の2項目目を取得しセット
-                    this.comboBox_devKey.Text = (string)valList.GetValue(1);
+                    this.comboBox_devKey.Text = (string)strList[1];
                     // 画面表示のトークンに 該当行の3項目目を取得しセット
-                    this.comboBox_devToken.Text = (string)valList.GetValue(2);
+                    this.comboBox_devToken.Text = (string)strList[2];
                 }
             }
         }
@@ -264,10 +277,9 @@ namespace TrelloWriterCS
         }
 
         /// <summary>
-        /// 【共通メソッド】
-        /// ファイルを読み込み、StreamReaderオブジェクトを返すメソッド
+        /// ファイルを読み込み、StreamReaderオブジェクトを返すメソッド (開発者情報ファイル専用)
         /// </summary>
-        /// ・読み取りのみ。書き込みは別の共通メソッドで行うこと。
+        /// ・型指定の関係で実質開発者情報ファイル専用のメソッド。
         /// 
         /// 戻り値
         /// 　行番号, 行の配列要素(=string型配列) のDirectory型オブジェクトを返す
@@ -280,10 +292,9 @@ namespace TrelloWriterCS
         /// 　ファイルの中身の書式が指定書式ではない - 指定書式は定数で共通変数化しておくこと
         /// 　
         /// <param name="filename">ファイルの中身(Directoryオブジェクト)</param>
-        private Dictionary<int, string[]> readCsvFile(StreamReader reader, int len)
+        private Dictionary<int, List<string>> readCsvFile(StreamReader reader, int len)
         {
-
-            Dictionary<int, string[]> result = new Dictionary<int, string[]>();
+            Dictionary<int, List<string>> result = new Dictionary<int, List<string>>();
 
             // 戻り値の行番号指定 (0開始)
             int rownum = 0;
@@ -294,21 +305,30 @@ namespace TrelloWriterCS
                 string line = reader.ReadLine();
                 // 読み込んだ1行をデリミタ毎に分けて配列に格納
                 string[] splitWords = line.Split(FILE_DELIMITER_CONMA);
-                // 行のデータ格納用、要素数はwhileループで読み込んだ行内に存在する要素数であり可変長
-                string[] strVal = new string[splitWords.Length];
+                // 行のデータ格納用
+                List<string> strList = new List<string>();
+                strList.AddRange(splitWords);
 
                 // 行末まで要素を1つずつ取得し、string配列に格納していく
-                for (int i=0; i < splitWords.Length; i++)
+                for (int i=0; i < strList.Count; ++i)
                 {
-                    // デリミタで区切った文字列を1要素ずつ抽出し、戻り値のValue部のstring配列に格納
-                    // 戻り値は「1行に1配列(内に複数要素)」という構成
-                    strVal[i] = (string)splitWords.GetValue(i);
+                    // 先頭のスペースを除去して、ダブルクォートが入っていないか確認
+                    if (strList[i] != string.Empty && strList[i].TrimStart()[0] == '"')
+                    {
+                        // サイドダブルクオートが出てくるまで要素を結合
+                        while(strList[i].TrimEnd()[strList[i].TrimEnd().Length - 1] != '"')
+                        {
+                            strList[i] = strList[i] + "," + strList[i + 1];
+                            //結合したら要素を削除
+                            strList.RemoveAt(i + 1);
+                        }
+                    }
                 }
                 // 要素数チェック
                 checkLineLength(splitWords, len);
 
                 // 戻り値のDirectoryオブジェクトに格納 (行番号, 該当行の要素配列)
-                result.Add(rownum, strVal);
+                result.Add(rownum, strList);
                 // 行数をインクリメント
                 rownum++;
             }
@@ -387,7 +407,7 @@ namespace TrelloWriterCS
         private void button_commit_Click(object sender, EventArgs e)
         {
             // 登録前最終確認ダイアログ - 登録氏名、登録先ボード、リストの最終確認
-            var verificationResult
+            DialogResult verificationResult
                 = MessageBox.Show(
                     REG_VERIFICATION_MSG
                     + NEW_LINE_CHAR + LABEL_NAME          + COLON + this.comboBox_userName.Text
@@ -398,20 +418,210 @@ namespace TrelloWriterCS
                     MessageBoxIcon.Information);
 
             // DialogResult.Yes以外は登録中断
-            if (!6.Equals(verificationResult))
+            if (!DialogResult.Yes.Equals(verificationResult))
             {
                 return;
             }
 
+            // 月間作業予定CSVを読み込む - エラーが1件以上ある場合は登録しない
 
+            // 月間作業予定CSVファイルのパス
+            string scheduleFilePath = APP_CURRENT_DIR + FILE_DELIMITER_DOLLER + FILE_NAME_SCHEDULE_EN;
 
+            // ★チェック1 ファイルの存在
+            if (!File.Exists(scheduleFilePath))
+            {
+                // エラーダイアログ表示
+                MessageBox.Show(
+                    FILE_NAME_SCHEDULE_JP + ERROR_MSG_FILE_NOT_FOUND,
+                    FILE_NAME_SCHEDULE_JP + ERROR_TITLE_FILE_NOT_EXIST,
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                // アプリは終了しないが、登録もしない
+                return;
+            }
 
-            // カード一括登録
-            // 指定の場所に指定のファイル(月間作業予定csv)が存在する場合のみ、登録を行う
-            // 月間作業予定csvに関するチェックを最初に行い、正常な場合のみ登録を行う
+            // 開発者情報ファイルを取得
+            FileInfo fileInfo = new FileInfo(scheduleFilePath);
 
+            // ★チェック2 ファイルサイズ
+            if (fileInfo.Length.Equals(0))
+            {
+                // エラーダイアログ表示
+                MessageBox.Show(
+                    FILE_NAME_SCHEDULE_JP + ERROR_MSG_FILE_SIZE_EMPTY,
+                    FILE_NAME_SCHEDULE_JP + ERROR_TITLE_FILE_SIZE_EMPTY,
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                // アプリは終了しないが、登録もしない
+                return;
+            }
 
+            // ★チェック3 ファイルフォーマット ...は実施しない(バラバラなので)
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
+            StreamReader reader = new StreamReader(scheduleFilePath, Encoding.GetEncoding("Shift_JIS"));
+            
+            try
+            {
+                // 月間作業予定CSVファイルの中身を取得、1行あたりの要素数は不定のため、チェックなし(0指定)
+                SCHEDULE_DATA = readCsvFile(reader, 0);
+            }
+            catch
+            {
+                // ファイルを開けなかった場合など
+                // エラーダイアログ表示
+                MessageBox.Show(
+                    FILE_NAME_SCHEDULE_JP + ERROR_MSG_FILE_CANNOT_OPEN,
+                    FILE_NAME_SCHEDULE_JP + ERROR_TITLE_FILE_CANNOT_OPEN,
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                // アプリは終了しないが、登録もしない
+                return;
+            }
+            // ファイルの情報を登録用インスタンスに詰め込む
+            registerSchedule();
+        }
+
+        /// <summary>
+        /// 月間作業予定CSV登録メソッド
+        /// </summary>
+        /// Dictionaryオブジェクトに格納された月間作業予定CSVファイルを分解し、
+        /// カード登録に必要な情報だけを結合したインスタンスオブジェクトを返す。
+        /// <returns></returns>
+        private void registerSchedule()
+        {
+            // ボード情報 (ローカル)
+            Board boardData;
+            // リスト情報 (ローカル)
+            List targetList;
+
+            // 終了ボタンを一時的に無効化
+            this.button_exit.Enabled = false;
+
+            // 登録先ボード名に完全一致するボードIDを再取得
+            IEnumerable <Board> boards = trello.Boards.Search(this.comboBox_boardName.Text);
+
+            // 検索結果が1件ではない場合、エラー (通常ありえないが念の為)
+            if (!1.Equals(boards.Count()))
+            {
+                MessageBox.Show(ERROR_MSG_TARGET_BOARD_MULTIPLE,
+                    ERROR_TITLE_TARGET_BOARD_MULTIPLE,
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
+
+            // 前行の現場名 (複数行に渡り同一現場名別作業内容で登録されるため、外部化)
+            string prevGenba = "";
+            // 前行の作業内容
+            string prevWorkInfo = "";
+            // 新規追加用カードオブジェクト (初期値)
+            Card newCard = new Card();
+            // 一括登録用のコレクション
+            List<Card> cardList = new List<Card>();
+            // 登録件数カウンタ
+            int counter = 0;
+
+            foreach (KeyValuePair<int, List<string>> keyValuePair in SCHEDULE_DATA)
+            {
+                // 5行目(4要素目)以下を取得する
+                if (keyValuePair.Key > 5)
+                {
+                    List<string> valList = new List<string>();
+                    valList.AddRange(keyValuePair.Value);
+                    
+                    // 1件だけのイテレータから要素を移し替える
+                    foreach (Board board in boards)
+                    {
+                        // ボードを取得
+                        boardData = trello.Boards.WithId(board.Id);
+
+                        // 登録先リストを取得 (同上)
+                        targetList = trello.Lists.ForBoard(boardData).FirstOrDefault(c => c.Name == this.comboBox_listName.Text);
+
+                        // 1要素目: 官民区分     ... ラベルの追加ができないため保留
+                        // 2要素目: 係           ... 同上
+                        // 3要素目: 契約名寄番号 ... 不要
+                        // 4要素目: 顧客番号     ... 不要
+                        // 5要素目: 顧客名       ... 不要
+                        // 6要素目: 現場名       ... ○
+                        // 7要素目: 売上金額     ... 不要
+                        // 8要素目: 外注金額     ... 不要
+                        // 9要素目: 作業者       ... ○
+                        //10要素目: 立会有無     ... ユーザの追加ができないため保留
+                        //11以降  : etc          ... 不要
+
+                        // 現在行の現場名
+                        string currentGenba = valList[5];
+                        // 現在行の作業内容
+                        string currentWorkInfo = "";
+                        // 現在行の作業者
+                        string currentWorker = valList[9];
+
+                        // 【参考情報】-----------------------------------------------------------------
+                        // 前行の内容を次行に引き継ぐ場合が多々あるため、ループ内での都度登録は不可
+                        // そのため、ループ外までは登録予定のCardオブジェクトをコレクションに格納し
+                        // ループを抜けた後にリストを回して1つずつ登録する。
+                        // 前行と同じ現場かどうかについては、「前要素がありかつ同じ現場」の場合のみ、
+                        // 登録用コレクションに追加しないような判定が必要。
+                        // -----------------------------------------------------------------------------
+
+                        // 前行と別の現場名を取得した場合 (1行目も該当)
+                        if (!prevGenba.Equals(currentGenba))
+                        {
+                            // いずれの場合もカード新規作成
+                            newCard = new Card();
+
+                            // 1周目は説明欄が整形できていないので登録させない
+                            //  ※ 登録はいかなる場合も2周目以降かつ前行の現場名と現在行の現場名が異なる一瞬のみ
+                            if (prevGenba != "" && prevGenba != currentGenba)
+                            {
+                                // 前現場名が空白以外(つまり2行目以降)の場合、
+                                // 前行までの現場名(prevGenba)と、前行までの作業内容(prevWorkInfo)で登録
+                                newCard = trello.Cards.Add(new NewCard(prevGenba, targetList));
+                                newCard.Desc = prevWorkInfo;
+                                cardList.Add(newCard);
+                                trello.Cards.Update(newCard);
+                            }
+
+                            if (prevGenba != currentGenba)
+                            {
+                                // [初回/コレクション追加後] 前行の現場名・作業内容を初期化
+                                prevGenba = "";
+                                prevWorkInfo = "";
+                            }
+                            // 説明欄(の1行目)に現場名大見出しのみ記入 ... "###現場名\n"
+                            currentWorkInfo += TEXT_BIG_TITLE + currentGenba + NEW_LINE_CHAR;
+                        }
+                        // 説明欄に作業内容を追記 ... "　・作業内容"
+                        currentWorkInfo += TEXT_DOUBLE_SPACE + TEXT_MID_DOT + valList[6];
+
+                        // 9要素目に作業者の記載（外注や予め決まっている担当者など）あれば行末に追記し改行
+                        if (!String.Empty.Equals(currentWorker))
+                        {
+                            // 9要素目が空欄でなければ末尾に追記 ... "　名前\n"
+                            currentWorkInfo += TEXT_DOUBLE_SPACE + currentWorker;
+                        }
+                        // 9要素目が空欄の場合は追加せずそのまま
+                        currentWorkInfo += NEW_LINE_CHAR;
+
+                        // 現場名、作業内容を次行に引き継ぐため変数に格納
+                        prevGenba = currentGenba;
+                        prevWorkInfo += currentWorkInfo;
+                        // プログレスバー用カウンタ加算
+                        counter++;
+                        // 登録用コレクションに追加するかどうかは次周の冒頭で行う
+                    }
+                }
+            }
+            // 登録完了
+            MessageBox.Show( counter + REG_COMPLETE_MSG,
+                TITLE_VERIFICATION,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+            // 終了ボタンを復帰
+            this.button_exit.Enabled = true;
         }
 
         /// <summary>
